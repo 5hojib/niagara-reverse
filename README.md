@@ -18,7 +18,7 @@ SHA-256:
 
 - Standard English build: `6280e6e845e290a1e603f8c1c6dda1dcc49600f0aa54865a213acd921f77b5a6`
 - Local-features build: `036ec39cd5c7167e0aa2f7c36ca3287e4ceb86f02fc3b9150b7b73911ab9e86e`
-- Local-features UI build: `d517e7038ddbfc281ad9942c1f0965e84ab4a066d9ce2a5d9fe295fc477826d1`
+- Local-features UI build: `dd43ac2d9d283614777237340e8ca8809a3dd7b278c244bb4f79056377f9fbf3`
 
 ## Startup validation fix
 
@@ -118,7 +118,7 @@ them.
   native startup validation. All eight local-feature tests also pass on the UI
   variant.
 - Comparing the UI APK with the local-features APK shows that only `classes.dex`
-  and signing metadata differ. Five existing classes change and one small patch
+  and signing metadata differ. Four existing classes change and one small patch
   class is added; every other primary-DEX class is unchanged after re-disassembly.
 
 **Limit:** no full Android install/launch test was performed on a device or
