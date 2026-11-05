@@ -1,6 +1,6 @@
-# Sugarcane — Salt Player 12.6.0 English build
+# Sugarcane 12.6.0
 
-English-localized rebuild of Salt Player (`com.salt.music`), based on:
+English-localized and Sugarcane-branded rebuild of Salt Player, based on:
 
 - Original APK: `12.6.0-2026110201-official-arm64-v8a.apk`
 - SHA-256: `2af308707dfa0563d7494fde20ce6943f96adeba5b152ba06d9ac19630f80283`
@@ -11,16 +11,20 @@ APK binaries are published in the
 [v12.6.0-stable release](https://github.com/5hojib/sugarcane/releases/tag/v12.6.0-stable)
 rather than stored on the default branch.
 
+The package ID remains `com.salt.music`, and the public test signing key remains
+unchanged, so this APK updates the previous stable English build without data
+loss.
+
 | Release asset | Notes |
 | --- | --- |
-| [`SaltPlayer-12.6.0-2026110201-en-signed.apk`](https://github.com/5hojib/sugarcane/releases/download/v12.6.0-stable/SaltPlayer-12.6.0-2026110201-en-signed.apk) | English build with normal feature availability |
-| [`SaltPlayer-12.6.0-2026110201-en-local-features-signed.apk`](https://github.com/5hojib/sugarcane/releases/download/v12.6.0-stable/SaltPlayer-12.6.0-2026110201-en-local-features-signed.apk) | Recommended stable build with bundled Pro and Audiophile options locally available |
-| `salt.keystore` | Signing key for this and future rebuilds (alias `salt`, store/key password `saltpass`) |
+| [`Sugarcane-12.6.0-2026110201-stable.apk`](https://github.com/5hojib/sugarcane/releases/download/v12.6.0-stable/Sugarcane-12.6.0-2026110201-stable.apk) | Stable build with bundled Pro and Audiophile options locally available |
 
 SHA-256:
 
-- Standard English build: `6280e6e845e290a1e603f8c1c6dda1dcc49600f0aa54865a213acd921f77b5a6`
-- Local-features build: `036ec39cd5c7167e0aa2f7c36ca3287e4ceb86f02fc3b9150b7b73911ab9e86e`
+- Sugarcane stable build: `04a0d673e23cebbe2e29af62c25372bfc38d5ded27c68b0c07cfc5d435e0b8ee`
+
+`salt.keystore` remains in the source tree for reproducible rebuilds (alias
+`salt`, store/key password `saltpass`). Treat it as a public test key.
 
 ## Startup validation fix
 
@@ -39,10 +43,10 @@ build, so **install it over that build to preserve app data**. The signing key
 was published with the first rebuild; treat it as a public test key, not a
 private or official developer credential.
 
-## Local-feature availability variant
+## Local-feature availability
 
-The `en-local-features` APK initializes these three local configuration flags as
-enabled before the app loads them:
+The Sugarcane APK initializes these three local configuration flags as enabled
+before the app loads them:
 
 - `salt_player_pro`
 - `salt_player_pro_purchased_2`
@@ -71,11 +75,15 @@ privacy consent, and hardware checks are also unchanged.
 - Replaced Chinese legal text under `assets/src/zh-CN/` with English.
 - Cleaned Chinese values out of the `values-ug` (Uyghur) resource set, which
   previously contained untranslated Chinese.
+- Changed the launcher/app label to **Sugarcane** in every packaged locale.
+- Replaced human-facing Salt Player branding in resources, legal assets,
+  hardcoded DEX strings, and native integrity text.
 
 Preserved as-is: Japanese song titles, the Japanese language label, and three
 encrypted DEX string pools. Native-library text and encrypted runtime strings
 were not comprehensively localized; the earlier plaintext scans did not cover
-them.
+them. Compatibility identifiers, the package ID, signing certificate, format
+markers, and working upstream URLs intentionally retain their original values.
 
 ## Verification
 
@@ -92,15 +100,14 @@ them.
 - Eight local-feature tests confirm the three availability flags initialize to
   true on fresh installs and upgrades, cannot be disabled through their setters,
   and do not alter unrelated preferences or consent values.
-- Comparing the two current APKs shows that only `classes.dex` and signature
-  metadata differ; resources, manifest, assets, native libraries, and the other
-  DEX files are byte-identical.
-- The local-features APK was installed and launched in an Android 11 emulator;
-  it remained running with no `AndroidRuntime` exception.
+- Eight Sugarcane branding regression tests confirm the app label, visible-string
+  replacement, unchanged package manifest and secondary DEX files, local-feature
+  defaults, DEX 035 format, signing certificate, and native startup validation.
 
-**Limit:** the emulator check is a startup smoke test, not a complete functional
-or hardware-audio test. CPU emulation separately tests the native validation
-routine.
+**Limit:** at the user's request, the final branding-only rebuild was not run
+through another full emulator launch. Its known-good base build passed the
+Android 11 startup smoke test; static APK checks and CPU emulation separately
+verify the final payload and native validation routine.
 
 ## Automated APK releases
 
@@ -119,6 +126,18 @@ and uploads both the APK and `SHA256SUMS.txt` to a new GitHub Release.
 
 Automation can also send a `repository_dispatch` event of type
 `release-apk-from-url` with matching fields in `client_payload`.
+
+### Reproduce the Sugarcane branding patch
+
+After decoding the stable local-features APK resources and primary DEX, run:
+
+```sh
+python3 scripts/rebrand_sugarcane.py decoded-resources decoded-smali
+```
+
+Rebuild resources, assemble the primary DEX as DEX 035, package, align, and sign
+with the same key. Then run `scripts/test_sugarcane_branding.py` against the base
+and final artifacts.
 
 ### Reproduce the startup fix and tests
 
@@ -166,6 +185,6 @@ python3 scripts/test_local_features.py \
 ## Install note
 
 The APK cannot upgrade an official installation because its signing key differs.
-Back up app data before uninstalling the official app. No uninstall is needed
-when switching between these English builds because they use the same package,
-version code, and signing key.
+Back up app data before uninstalling the official app. It updates the previous
+English/local-features rebuild because the package, version code, and signing key
+are unchanged.
