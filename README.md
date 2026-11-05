@@ -9,10 +9,14 @@ English-localized rebuild of Salt Player (`com.salt.music`), based on:
 
 | File | Notes |
 | --- | --- |
-| `SaltPlayer-12.6.0-2026110201-en-signed.apk` | Rebuilt, zipaligned, signed APK |
+| `SaltPlayer-12.6.0-2026110201-en-signed.apk` | English build with normal feature availability |
+| `SaltPlayer-12.6.0-2026110201-en-local-features-signed.apk` | English build with bundled Pro and Audiophile options locally available |
 | `salt.keystore` | Signing key for this and future rebuilds (alias `salt`, store/key password `saltpass`) |
 
-Signed SHA-256: `6280e6e845e290a1e603f8c1c6dda1dcc49600f0aa54865a213acd921f77b5a6`
+SHA-256:
+
+- Standard English build: `6280e6e845e290a1e603f8c1c6dda1dcc49600f0aa54865a213acd921f77b5a6`
+- Local-features build: `036ec39cd5c7167e0aa2f7c36ca3287e4ceb86f02fc3b9150b7b73911ab9e86e`
 
 ## Startup validation fix
 
@@ -30,6 +34,27 @@ It uses the same package, version code, and signing key as the previous English
 build, so **install it over that build to preserve app data**. The signing key
 was published with the first rebuild; treat it as a public test key, not a
 private or official developer credential.
+
+## Local-feature availability variant
+
+The `en-local-features` APK initializes these three local configuration flags as
+enabled before the app loads them:
+
+- `salt_player_pro`
+- `salt_player_pro_purchased_2`
+- `audiophile_pack`
+
+Their setters also clamp the values to `true`, so purchase refresh or a UI
+deactivation action cannot switch the local availability flags off. This makes
+the bundled Pro UI/effects and Audiophile Pack gates (including Morvanium and
+USB DAC controls) locally available on fresh installs and upgrades.
+
+This does **not** fabricate a store receipt, account, server entitlement, or
+payment record, and it cannot grant access to services enforced by a remote
+server. Feature settings remain under user control: Morvanium auto-mix, USB
+exclusive output, reverse playback, visual effects, and similar options are
+available but are not forcibly switched on. Android permissions, device support,
+privacy consent, and hardware checks are also unchanged.
 
 ## What changed
 
@@ -60,12 +85,18 @@ them.
   rebuild certificate while differing from other certificates.
 - Archive-content checks confirm only the validation library and signing metadata
   changed from the previous English APK.
+- Eight local-feature tests confirm the three availability flags initialize to
+  true on fresh installs and upgrades, cannot be disabled through their setters,
+  and do not alter unrelated preferences or consent values.
+- Comparing the two current APKs shows that only `classes.dex` and signature
+  metadata differ; resources, manifest, assets, native libraries, and the other
+  DEX files are byte-identical.
 
 **Limit:** no full Android install/launch test was performed on a device or
 Android emulator. CPU emulation tests the specific native validation routine,
 not the complete app lifecycle or UI.
 
-### Reproduce the fix and tests
+### Reproduce the startup fix and tests
 
 `scripts/fix_apk_validation.py` takes the original native library, a verified APK
 signed with the rebuild key, and a new output-library path:
@@ -82,6 +113,25 @@ environment and run:
 python3 scripts/test_apk_validation.py original.apk fixed-english.apk previous-english.apk
 ```
 
+### Reproduce the local-feature patch and tests
+
+After disassembling the standard translated `classes.dex`, patch its exact
+`androidx/media3/ཌྷ.smali` baseline and reassemble it:
+
+```sh
+python3 scripts/enable_local_features.py AppConfig-original.smali AppConfig-patched.smali
+```
+
+Replace the class in the disassembly tree with the patched output, assemble
+`classes.dex`, rebuild, zipalign, and sign with the same key. To test the rebuilt
+variant (after installing `unicorn==2.1.4`):
+
+```sh
+python3 scripts/test_local_features.py \
+  standard-english.apk local-features.apk \
+  AppConfig-original.smali AppConfig-redecoded-from-local-features.smali
+```
+
 ## Rebuild summary
 
 1. `apktool d -s` decode.
@@ -93,4 +143,5 @@ python3 scripts/test_apk_validation.py original.apk fixed-english.apk previous-e
 
 The APK cannot upgrade an official installation because its signing key differs.
 Back up app data before uninstalling the official app. No uninstall is needed
-when updating the earlier English build with this fixed APK.
+when switching between these English builds because they use the same package,
+version code, and signing key.
