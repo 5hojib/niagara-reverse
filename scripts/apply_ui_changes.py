@@ -24,6 +24,9 @@ EXPECTED = {
         "21eb12c5a53aed5f4928f65ce810cffb31b39160199d02c94e70416219b51bc2",
         "f6ea639975b3d996450081ca26b4e0570294d45d9a0684c7d44fb2ccc9ba1295",
     },
+    "androidx/media3/wt2.smali": {
+        "641b850bcbdab3b98241a2f5ce24ff04080d5fda9665347e84ccab84cfdd9ce8",
+    },
     "com/salt/music/ui/MainActivity.smali": {
         "1353d6017effdd35146cee10f7d29ab768d9cfa18e69e0848215d28a37cc48d4",
         "5dcfa1b67e927ceb96ab0ea7ad740a4cb9f1bbad415a0962e4f983d278effb80",
@@ -37,6 +40,10 @@ PATCH_CLASS = r'''.class public final Lcom/salt/music/ui/patch/LocalUiPatch;
 
 # static fields
 .field private static lastSwipeTime:J
+
+.field private static lyricsPager:Landroidx/media3/hj2;
+
+.field private static lyricsScope:Landroidx/media3/ആ;
 
 .field private static swipeActive:Z
 
@@ -292,28 +299,26 @@ PATCH_CLASS = r'''.class public final Lcom/salt/music/ui/patch/LocalUiPatch;
     return-void
 .end method
 
+.method public static setLyricsNavigation(Landroidx/media3/ആ;Landroidx/media3/hj2;)V
+    .registers 2
+
+    sput-object p0, Lcom/salt/music/ui/patch/LocalUiPatch;->lyricsScope:Landroidx/media3/ആ;
+
+    sput-object p1, Lcom/salt/music/ui/patch/LocalUiPatch;->lyricsPager:Landroidx/media3/hj2;
+
+    return-void
+.end method
+
 .method public static renderLyricsBack(Landroidx/media3/r50;)V
     .registers 6
 
-    sget-object v0, Landroidx/media3/ز;->Ԩ:Landroidx/media3/t84;
-
-    invoke-virtual {p0, v0}, Landroidx/media3/r50;->ՠ(Landroidx/media3/i03;)Ljava/lang/Object;
-
-    move-result-object v0
-
-    instance-of v1, v0, Lcom/salt/music/ui/MainActivity;
+    sget-object v1, Lcom/salt/music/ui/patch/LocalUiPatch;->lyricsPager:Landroidx/media3/hj2;
 
     if-eqz v1, :return
 
-    check-cast v0, Lcom/salt/music/ui/MainActivity;
+    sget-object v2, Lcom/salt/music/ui/patch/LocalUiPatch;->lyricsScope:Landroidx/media3/ആ;
 
-    iget-object v1, v0, Lcom/salt/music/ui/MainActivity;->ޱ:Landroidx/media3/b2;
-
-    if-eqz v1, :return
-
-    invoke-static {p0}, Landroidx/media3/g70;->ޕ(Landroidx/media3/r50;)Landroidx/media3/ആ;
-
-    move-result-object v2
+    if-eqz v2, :return
 
     new-instance v3, Landroidx/media3/hi2;
 
@@ -418,6 +423,24 @@ def patch_tree(root: Path) -> None:
         "    .line 169",
     )
     pager_impl.write_text(text)
+
+    lyrics_page = root / "androidx/media3/wt2.smali"
+    text = lyrics_page.read_text()
+    pattern = re.compile(
+        r"(    const v2, 0x513394f8\n.*?"
+        r"    invoke-virtual \{v13, v2\}, Landroidx/media3/r50;->ޢ\(I\)V\n)",
+        re.S,
+    )
+    replacement = (
+        r"\1\n"
+        r"    iget-object v2, v0, Landroidx/media3/wt2;->ֈ:Landroidx/media3/ആ;\n\n"
+        r"    iget-object v3, v0, Landroidx/media3/wt2;->ԯ:Landroidx/media3/hj2;\n\n"
+        r"    invoke-static {v2, v3}, Lcom/salt/music/ui/patch/LocalUiPatch;->setLyricsNavigation(Landroidx/media3/ആ;Landroidx/media3/hj2;)V\n"
+    )
+    text, count = pattern.subn(replacement, text, count=1)
+    if count != 1:
+        raise ValueError("Could not inject the lyrics navigation context")
+    lyrics_page.write_text(text)
 
     activity = root / "com/salt/music/ui/MainActivity.smali"
     text = replace_once(

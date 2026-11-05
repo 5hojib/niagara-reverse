@@ -23,6 +23,7 @@ CHANGED_CLASSES = {
     "androidx/media3/ch1.smali",
     "androidx/media3/s92.smali",
     "androidx/media3/ut2.smali",
+    "androidx/media3/wt2.smali",
     "com/salt/music/ui/MainActivity.smali",
 }
 PATCH_CLASS = "com/salt/music/ui/patch/LocalUiPatch.smali"
@@ -73,8 +74,9 @@ class UiChangeTests(unittest.TestCase):
         cls.pager_impl_before = cls.base_files["androidx/media3/s92.smali"].decode()
         cls.pager_impl_after = cls.ui_files["androidx/media3/s92.smali"].decode()
         cls.activity = cls.ui_files["com/salt/music/ui/MainActivity.smali"].decode()
+        cls.lyrics_page = cls.ui_files["androidx/media3/wt2.smali"].decode()
 
-    def test_only_four_existing_classes_and_one_new_class_change(self) -> None:
+    def test_only_five_existing_classes_and_one_new_class_change(self) -> None:
         self.assertEqual(set(self.ui_files) - set(self.base_files), {PATCH_CLASS})
         self.assertEqual(set(self.base_files) - set(self.ui_files), set())
         changed = {
@@ -102,6 +104,13 @@ class UiChangeTests(unittest.TestCase):
             "Landroidx/media3/hi2;-><init>(Landroidx/media3/ആ;Landroidx/media3/hj2;I)V",
             self.patch,
         )
+        self.assertIn(
+            "LocalUiPatch;->setLyricsNavigation(Landroidx/media3/ആ;Landroidx/media3/hj2;)V",
+            self.lyrics_page,
+        )
+        self.assertIn("->lyricsScope:Landroidx/media3/ആ;", self.patch)
+        self.assertIn("->lyricsPager:Landroidx/media3/hj2;", self.patch)
+        self.assertNotIn("Landroidx/media3/g70;->ޕ", self.patch)
         hi2 = self.ui_files["androidx/media3/hi2.smali"].decode()
         ii2 = self.ui_files["androidx/media3/ii2.smali"].decode()
         self.assertIn("const/4 v2, 0x6", hi2)
