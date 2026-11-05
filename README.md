@@ -33,10 +33,9 @@ The first English rebuild installed successfully but was rejected when opened.
 the original certificate's Android `Signature.hashCode()` (`0xba4870d3`), while
 the rebuild's certificate hash is `0x64219e6c`.
 
-The current APK changes only the two native instructions that load that expected
-value. The certificate comparison, startup checks, translated DEX files,
-resources, assets, manifest, and other libraries remain unchanged. It does not
-disable validation or change paid-feature logic.
+The startup-validation fix itself changes only the two native instructions that
+load that expected value. It does not disable validation or change paid-feature
+logic; the Sugarcane branding changes are documented separately below.
 
 It uses the same package, version code, and signing key as the previous English
 build, so **install it over that build to preserve app data**. The signing key
@@ -95,8 +94,8 @@ markers, and working upstream URLs intentionally retain their original values.
 - ARM64 regression tests execute the native hash getter with Unicorn, reproduce
   the previous certificate mismatch, and confirm the fixed getter matches the
   rebuild certificate while differing from other certificates.
-- Archive-content checks confirm only the validation library and signing metadata
-  changed from the previous English APK.
+- Native regression checks confirm the certificate getter still matches the
+  rebuild certificate after the branding-only native text update.
 - Eight local-feature tests confirm the three availability flags initialize to
   true on fresh installs and upgrades, cannot be disabled through their setters,
   and do not alter unrelated preferences or consent values.
