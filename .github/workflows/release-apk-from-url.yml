@@ -1,0 +1,131 @@
+name: Release APK from URL
+
+on:
+  workflow_dispatch:
+    inputs:
+      apk_url:
+        description: HTTPS URL of the APK to publish
+        required: true
+        type: string
+      tag:
+        description: Release tag (for example, v12.7.0)
+        required: true
+        type: string
+      release_name:
+        description: Release title
+        required: false
+        default: Sugarcane APK
+        type: string
+      asset_name:
+        description: APK filename in the release
+        required: false
+        default: Sugarcane.apk
+        type: string
+      sha256:
+        description: Optional expected SHA-256
+        required: false
+        type: string
+      prerelease:
+        description: Mark as a prerelease
+        required: false
+        default: false
+        type: boolean
+  repository_dispatch:
+    types: [release-apk-from-url]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-apk-${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.event.client_payload.tag }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    env:
+      APK_URL: ${{ github.event_name == 'workflow_dispatch' && inputs.apk_url || github.event.client_payload.apk_url }}
+      RELEASE_TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.event.client_payload.tag }}
+      RELEASE_NAME: ${{ github.event_name == 'workflow_dispatch' && inputs.release_name || github.event.client_payload.release_name || 'Sugarcane APK' }}
+      ASSET_NAME: ${{ github.event_name == 'workflow_dispatch' && inputs.asset_name || github.event.client_payload.asset_name || 'Sugarcane.apk' }}
+      EXPECTED_SHA256: ${{ github.event_name == 'workflow_dispatch' && inputs.sha256 || github.event.client_payload.sha256 }}
+      PRERELEASE: ${{ github.event_name == 'workflow_dispatch' && inputs.prerelease || github.event.client_payload.prerelease || false }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Validate inputs and download APK
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [[ -z "${APK_URL}" || "${APK_URL}" != https://* ]]; then
+            echo "apk_url must be a non-empty HTTPS URL" >&2
+            exit 1
+          fi
+          if [[ ! "${RELEASE_TAG}" =~ ^[A-Za-z0-9._-]+$ ]]; then
+            echo "tag may contain only letters, numbers, dots, underscores, and hyphens" >&2
+            exit 1
+          fi
+          if [[ -z "${ASSET_NAME}" || "${ASSET_NAME}" == */* || "${ASSET_NAME}" != *.apk ]]; then
+            echo "asset_name must be a plain filename ending in .apk" >&2
+            exit 1
+          fi
+          if [[ -n "${EXPECTED_SHA256}" && ! "${EXPECTED_SHA256}" =~ ^[A-Fa-f0-9]{64}$ ]]; then
+            echo "sha256 must be empty or exactly 64 hexadecimal characters" >&2
+            exit 1
+          fi
+
+          echo "::add-mask::${APK_URL}"
+          curl \
+            --fail \
+            --location \
+            --proto '=https' \
+            --proto-redir '=https' \
+            --retry 3 \
+            --retry-all-errors \
+            --show-error \
+            --silent \
+            --output "${ASSET_NAME}" \
+            "${APK_URL}"
+
+          unzip -tq "${ASSET_NAME}"
+          unzip -Z1 "${ASSET_NAME}" | grep -Fxq AndroidManifest.xml
+          unzip -Z1 "${ASSET_NAME}" | grep -Fxq classes.dex
+
+          actual_sha256="$(sha256sum "${ASSET_NAME}" | cut -d' ' -f1)"
+          if [[ -n "${EXPECTED_SHA256}" && "${actual_sha256,,}" != "${EXPECTED_SHA256,,}" ]]; then
+            echo "SHA-256 mismatch" >&2
+            exit 1
+          fi
+
+          printf '%s  %s\n' "${actual_sha256}" "${ASSET_NAME}" > SHA256SUMS.txt
+          {
+            echo "### APK ready"
+            echo
+            echo "- Asset: \`${ASSET_NAME}\`"
+            echo "- SHA-256: \`${actual_sha256}\`"
+            echo "- Tag: \`${RELEASE_TAG}\`"
+          } >> "${GITHUB_STEP_SUMMARY}"
+
+      - name: Create GitHub release
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if gh release view "${RELEASE_TAG}" --repo "${GITHUB_REPOSITORY}" >/dev/null 2>&1; then
+            echo "Release ${RELEASE_TAG} already exists; use a new tag" >&2
+            exit 1
+          fi
+
+          args=(
+            "${RELEASE_TAG}"
+            "${ASSET_NAME}"
+            SHA256SUMS.txt
+            --repo "${GITHUB_REPOSITORY}"
+            --target "${GITHUB_SHA}"
+            --title "${RELEASE_NAME}"
+            --generate-notes
+          )
+          if [[ "${PRERELEASE}" == "true" ]]; then
+            args+=(--prerelease)
+          fi
+          gh release create "${args[@]}"

@@ -1,16 +1,20 @@
-# Salt Player 12.6.0 — English build
+# Sugarcane — Salt Player 12.6.0 English build
 
 English-localized rebuild of Salt Player (`com.salt.music`), based on:
 
 - Original APK: `12.6.0-2026110201-official-arm64-v8a.apk`
 - SHA-256: `2af308707dfa0563d7494fde20ce6943f96adeba5b152ba06d9ac19630f80283`
 
-## Artifact
+## Downloads
 
-| File | Notes |
+APK binaries are published in the
+[v12.6.0-stable release](https://github.com/5hojib/sugarcane/releases/tag/v12.6.0-stable)
+rather than stored on the default branch.
+
+| Release asset | Notes |
 | --- | --- |
-| `SaltPlayer-12.6.0-2026110201-en-signed.apk` | English build with normal feature availability |
-| `SaltPlayer-12.6.0-2026110201-en-local-features-signed.apk` | English build with bundled Pro and Audiophile options locally available |
+| [`SaltPlayer-12.6.0-2026110201-en-signed.apk`](https://github.com/5hojib/sugarcane/releases/download/v12.6.0-stable/SaltPlayer-12.6.0-2026110201-en-signed.apk) | English build with normal feature availability |
+| [`SaltPlayer-12.6.0-2026110201-en-local-features-signed.apk`](https://github.com/5hojib/sugarcane/releases/download/v12.6.0-stable/SaltPlayer-12.6.0-2026110201-en-local-features-signed.apk) | Recommended stable build with bundled Pro and Audiophile options locally available |
 | `salt.keystore` | Signing key for this and future rebuilds (alias `salt`, store/key password `saltpass`) |
 
 SHA-256:
@@ -91,10 +95,30 @@ them.
 - Comparing the two current APKs shows that only `classes.dex` and signature
   metadata differ; resources, manifest, assets, native libraries, and the other
   DEX files are byte-identical.
+- The local-features APK was installed and launched in an Android 11 emulator;
+  it remained running with no `AndroidRuntime` exception.
 
-**Limit:** no full Android install/launch test was performed on a device or
-Android emulator. CPU emulation tests the specific native validation routine,
-not the complete app lifecycle or UI.
+**Limit:** the emulator check is a startup smoke test, not a complete functional
+or hardware-audio test. CPU emulation separately tests the native validation
+routine.
+
+## Automated APK releases
+
+The **Release APK from URL** workflow publishes an APK without committing the
+binary to the branch. Open **Actions → Release APK from URL → Run workflow** and
+provide:
+
+- an HTTPS APK URL;
+- a new release tag;
+- optionally, the expected SHA-256, release title, asset filename, and
+  prerelease flag.
+
+The workflow validates the URL and filename, checks that the download is a ZIP
+containing `AndroidManifest.xml` and `classes.dex`, verifies the optional digest,
+and uploads both the APK and `SHA256SUMS.txt` to a new GitHub Release.
+
+Automation can also send a `repository_dispatch` event of type
+`release-apk-from-url` with matching fields in `client_payload`.
 
 ### Reproduce the startup fix and tests
 
