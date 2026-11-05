@@ -11,12 +11,14 @@ English-localized rebuild of Salt Player (`com.salt.music`), based on:
 | --- | --- |
 | `SaltPlayer-12.6.0-2026110201-en-signed.apk` | English build with normal feature availability |
 | `SaltPlayer-12.6.0-2026110201-en-local-features-signed.apk` | English build with bundled Pro and Audiophile options locally available |
+| `SaltPlayer-12.6.0-2026110201-en-local-features-ui-signed.apk` | Local-features build with player swipe and lyrics-screen UI changes |
 | `salt.keystore` | Signing key for this and future rebuilds (alias `salt`, store/key password `saltpass`) |
 
 SHA-256:
 
 - Standard English build: `6280e6e845e290a1e603f8c1c6dda1dcc49600f0aa54865a213acd921f77b5a6`
 - Local-features build: `036ec39cd5c7167e0aa2f7c36ca3287e4ceb86f02fc3b9150b7b73911ab9e86e`
+- Local-features UI build: `dd43ac2d9d283614777237340e8ca8809a3dd7b278c244bb4f79056377f9fbf3`
 
 ## Startup validation fix
 
@@ -56,6 +58,26 @@ exclusive output, reverse playback, visual effects, and similar options are
 available but are not forcibly switched on. Android permissions, device support,
 privacy consent, and hardware checks are also unchanged.
 
+## Player and lyrics UI variant
+
+The `en-local-features-ui` APK includes all local-feature changes above and also:
+
+- Removes the lyrics-source tag shown on the playback lyrics screen (for
+  example, `Embedded`).
+- Changes a horizontal swipe on player page 1 into track navigation: swipe left
+  for next and right for previous.
+- Reuses the app's existing direction state and animated cover transition for
+  swipe-triggered track changes.
+- Ignores short, predominantly vertical, slow, repeated, and seek-bar gestures.
+  Vertical lyrics scrolling remains available.
+- Disables touch-swiping between the player and lyrics pages. The existing
+  control can still open lyrics programmatically.
+- Adds a top-left Back button to lyrics, with a 300 ms animated return to the
+  music player.
+
+The horizontal player pager is the only pager whose touch scrolling is changed;
+other app pagers retain their original behavior.
+
 ## What changed
 
 - Translated Chinese UI/format strings in `resources.arsc` to English
@@ -88,9 +110,16 @@ them.
 - Eight local-feature tests confirm the three availability flags initialize to
   true on fresh installs and upgrades, cannot be disabled through their setters,
   and do not alter unrelated preferences or consent values.
-- Comparing the two current APKs shows that only `classes.dex` and signature
-  metadata differ; resources, manifest, assets, native libraries, and the other
-  DEX files are byte-identical.
+- Comparing the standard and local-features APKs shows that only `classes.dex`
+  and signature metadata differ; resources, manifest, assets, native libraries,
+  and the other DEX files are byte-identical.
+- Ten UI regression tests confirm the source label removal, Back-button target,
+  pager isolation, swipe direction/guards, DEX reference limit, signing key, and
+  native startup validation. All eight local-feature tests also pass on the UI
+  variant.
+- Comparing the UI APK with the local-features APK shows that only `classes.dex`
+  and signing metadata differ. Four existing classes change and one small patch
+  class is added; every other primary-DEX class is unchanged after re-disassembly.
 
 **Limit:** no full Android install/launch test was performed on a device or
 Android emulator. CPU emulation tests the specific native validation routine,
@@ -131,6 +160,28 @@ python3 scripts/test_local_features.py \
   standard-english.apk local-features.apk \
   AppConfig-original.smali AppConfig-redecoded-from-local-features.smali
 ```
+
+### Reproduce the player/lyrics UI patch and tests
+
+Disassemble the local-features build's primary `classes.dex`, then apply the
+guarded patch to the smali root:
+
+```sh
+python3 scripts/apply_ui_changes.py decoded/smali
+```
+
+Reassemble the primary DEX as DEX 035, replace only `classes.dex` in the
+local-features APK, zipalign, and sign with the same key. After re-disassembling
+both primary DEX files, run:
+
+```sh
+python3 scripts/test_ui_changes.py \
+  local-features.apk local-features-ui.apk \
+  base-decoded/smali ui-decoded/smali
+```
+
+The patch script checks exact known 12.6.0 baselines and refuses to modify an
+unexpected build.
 
 ## Rebuild summary
 
